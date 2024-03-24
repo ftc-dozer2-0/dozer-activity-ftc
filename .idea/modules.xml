@@ -2,6 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/DashServer.iml" filepath="$PROJECT_DIR$/DashServer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/DashServer.main.iml" filepath="$PROJECT_DIR$/.idea/modules/DashServer.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/DashServer.test.iml" filepath="$PROJECT_DIR$/.idea/modules/DashServer.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/DashboardBackend/DashboardBackend.iml" filepath="$PROJECT_DIR$/DashboardBackend/DashboardBackend.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/dozer-activity-ftc.iml" filepath="$PROJECT_DIR$/.idea/dozer-activity-ftc.iml" />
     </modules>
   </component>

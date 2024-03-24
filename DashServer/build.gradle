@@ -1,0 +1,25 @@
+plugins {
+    id 'java'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url = 'https://maven.brott.dev/'
+    }
+}
+
+dependencies {
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+
+    implementation "org.nanohttpd:nanohttpd-websocket:2.3.1"
+    implementation("com.acmerobotics.dashboard:core:0.4.15") {
+        exclude group: 'org.firstinspires.ftc'
+    }
+
+}
