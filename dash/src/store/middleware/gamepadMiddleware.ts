@@ -73,6 +73,8 @@ const REST_GAMEPAD_STATE: GamepadState = {
   right_trigger: 0,
 };
 
+let keyboardState: GamepadState | null = null;
+
 const extractGamepadState = (gamepad: Gamepad) => {
   const type = GamepadType.getFromGamepad(gamepad);
   if (!GamepadType.isSupported(type)) {
@@ -214,28 +216,45 @@ const gamepadMiddleware: Middleware<Record<string, unknown>, RootState> = (
     }, 1000);
   }
   function updateGamepads() {
-    const gamepads = getGamepads();
-    if (gamepads.length === 0) {
+    let gamepads: (Gamepad | null | GamepadState)[] = [keyboardState];
+    gamepads.concat(getGamepads());
+    if (keyboardState === null) {
+      addKeyListeners()
+      setTimeout(updateGamepads,500);
+      return;
+    }
+    /*
+    if (gamepads.length === 1) {
+      addKeyListeners()
       setTimeout(updateGamepads, 500);
       return;
     }
 
+     */
+    let gamepadState: GamepadState = REST_GAMEPAD_STATE;
     // check for Start-A/Start-B
-    for (const gamepad of getGamepads()) {
-      if (gamepad === null || !gamepad.connected) {
+    for (const gamepad of gamepads) {
+      if (gamepad === null || (gamepad instanceof Gamepad) && !gamepad.connected) {
         continue;
       }
-
-      const gamepadType = GamepadType.getFromGamepad(gamepad);
-      if (!GamepadType.isSupported(gamepadType)) {
-        continue;
+      if (gamepad instanceof Gamepad) {
+        const gamepadType = GamepadType.getFromGamepad(gamepad);
+        if (!GamepadType.isSupported(gamepadType)) {
+          continue;
+        }
+        gamepadState = extractGamepadState(gamepad);
+      } else {
+        gamepadState = gamepad;
       }
 
-      const gamepadState = extractGamepadState(gamepad);
 
       // update gamepad 1 & 2 associations
       if (gamepadState.start && gamepadState.a) {
-        gamepad1Index = gamepad.index;
+        if ("index" in gamepad) {
+          gamepad1Index = gamepad.index + 1;
+        } else {
+          gamepad1Index = 0;
+        }
 
         store.dispatch(gamepadConnected(1));
 
@@ -245,7 +264,11 @@ const gamepadMiddleware: Middleware<Record<string, unknown>, RootState> = (
           gamepad2Index = -1;
         }
       } else if (gamepadState.start && gamepadState.b) {
-        gamepad2Index = gamepad.index;
+        if ("index" in gamepad) {
+          gamepad2Index = gamepad.index + 1;
+        } else {
+          gamepad2Index = 0;
+        }
 
         store.dispatch(gamepadConnected(2));
 
@@ -262,7 +285,11 @@ const gamepadMiddleware: Middleware<Record<string, unknown>, RootState> = (
         const gamepad = gamepads[gamepad1Index];
 
         if (gamepad) {
-          gamepad1State = extractGamepadState(gamepad);
+          if (gamepad instanceof Gamepad) {
+            gamepad1State = extractGamepadState(gamepad);
+          } else {
+            gamepad1State = gamepad;
+          }
         } else {
           gamepad1State = REST_GAMEPAD_STATE;
         }
@@ -275,21 +302,28 @@ const gamepadMiddleware: Middleware<Record<string, unknown>, RootState> = (
         const gamepad = gamepads[gamepad2Index];
 
         if (gamepad) {
-          gamepad2State = extractGamepadState(gamepad);
+          if (gamepad instanceof Gamepad) {
+            gamepad2State = extractGamepadState(gamepad);
+          } else {
+            gamepad2State = gamepad;
+          }
         } else {
           gamepad2State = REST_GAMEPAD_STATE;
         }
       } else {
         gamepad2State = REST_GAMEPAD_STATE;
       }
-
-      (store.dispatch as AppThunkDispatch)(
-        sendGamepadState(gamepad1State, gamepad2State),
-      );
+      let padsNotNeutral = (gamepad1State != REST_GAMEPAD_STATE || gamepad2State != REST_GAMEPAD_STATE)
+      if (padsNotNeutral) {
+        (store.dispatch as AppThunkDispatch)(
+            sendGamepadState(gamepad1State, gamepad2State),
+        );
+      }
     }
 
     requestAnimationFrame(updateGamepads);
   }
+  addKeyListeners();
 
   window.addEventListener('gamepaddisconnected', (evt: Event) => {
     // Required because lib.dom.d.ts doesn't have proper types for the gamepad events
@@ -297,20 +331,106 @@ const gamepadMiddleware: Middleware<Record<string, unknown>, RootState> = (
     // See: https://github.com/microsoft/TypeScript/issues/39425 & https://github.com/microsoft/TypeScript-DOM-lib-generator/pull/925
     const { gamepad } = evt as GamepadEvent;
 
-    if (gamepad1Index === gamepad.index) {
+    if (gamepad1Index === gamepad.index + 1) {
       store.dispatch(gamepadDisconnected(gamepad1Index));
 
       gamepad1Index = -1;
-    } else if (gamepad2Index === gamepad.index) {
+    } else if (gamepad2Index === gamepad.index + 1) {
       store.dispatch(gamepadDisconnected(gamepad2Index));
 
       gamepad2Index = -1;
     }
   });
 
+
   updateGamepads();
 
   return (next) => (action) => next(action);
 };
+
+function addKeyListeners() {
+  if (keyboardState === null) {
+    keyboardState = Object.assign({}, REST_GAMEPAD_STATE);
+  }
+  window.addEventListener("keydown",
+      function (event) {
+        if (event.defaultPrevented) {
+          return; // Do nothing if the event was already processed
+        }
+        if (keyboardState === null) {
+          keyboardState = REST_GAMEPAD_STATE;
+        }
+
+        switch (event.key) {
+          case "ArrowDown":
+            keyboardState.left_stick_y = 1.0;
+            break;
+          case "ArrowUp":
+            keyboardState.left_stick_y = -1.0;
+            break;
+          case "ArrowLeft":
+            keyboardState.left_stick_x = -1.0;
+            break;
+          case "ArrowRight":
+            keyboardState.left_stick_x = 1.0;
+            break;
+          case "b":
+            keyboardState.b = true;
+            break;
+          case "a":
+            keyboardState.a = true;
+            break;
+          case "s":
+            keyboardState.start = true;
+            break;
+          default:
+            return; // Quit when this doesn't handle the key event.
+        }
+
+        // Cancel the default action to avoid it being handled twice
+        event.preventDefault();
+      },
+      true);
+// the last option dispatches the event to the listener first,
+// then dispatches event to window
+
+  window.addEventListener("keyup", function (event) {
+    if (event.defaultPrevented) {
+      return; // Do nothing if the event was already processed
+    }
+    if (keyboardState === null) {
+      keyboardState = REST_GAMEPAD_STATE;
+    }
+
+    switch (event.key) {
+      case "ArrowDown":
+        keyboardState.left_stick_y = 0;
+        break;
+      case "ArrowUp":
+        keyboardState.left_stick_y = 0;
+        break;
+      case "ArrowLeft":
+        keyboardState.left_stick_x = 0;
+        break;
+      case "ArrowRight":
+        keyboardState.left_stick_x = 0;
+        break;
+      case "b":
+        keyboardState.b = false;
+        break;
+      case "a":
+        keyboardState.a = false;
+        break;
+      case "s":
+        keyboardState.start = false;
+        break;
+      default:
+        return;
+    }
+
+    // Cancel the default action to avoid it being handled twice
+    event.preventDefault();
+  }, true);
+}
 
 export default gamepadMiddleware;

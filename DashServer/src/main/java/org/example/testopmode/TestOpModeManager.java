@@ -1,6 +1,7 @@
 package org.example.testopmode;
 
 import com.acmerobotics.dashboard.SendFun;
+import org.example.GamepadOpMode;
 import org.example.TestFieldVersatilityOpMode;
 import org.example.TestSineWaveOpMode;
 
@@ -9,7 +10,7 @@ import java.util.List;
 
 public class TestOpModeManager {
     private final List<TestOpMode> testOpModes =
-        Arrays.asList(new TestSineWaveOpMode(), new TestFieldVersatilityOpMode());
+        Arrays.asList(new TestSineWaveOpMode(), new TestFieldVersatilityOpMode(), new GamepadOpMode());
     private TestOpMode activeOpMode = null;
 
     SendFun sendFun;

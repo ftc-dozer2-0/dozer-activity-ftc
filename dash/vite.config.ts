@@ -12,6 +12,8 @@ export default defineConfig({
     },
   },
 
+  publicDir: "dash",
+
   server: {
     proxy: {
       '/api': {
@@ -24,7 +26,6 @@ export default defineConfig({
     },
     hmr: {
       clientPort: 443,
-    },
-    publicDir: "dash"
+    }
   },
 });
