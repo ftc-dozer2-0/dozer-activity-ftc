@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 java {
@@ -23,3 +24,4 @@ dependencies {
     }
 
 }
+mainClassName = 'org.example.TestServer'
